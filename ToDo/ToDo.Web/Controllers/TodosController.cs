@@ -12,11 +12,9 @@ namespace ToDo.Web.Controllers
 {
     public class TodosController : ApiController
     {
-        private ToDoDbContext db = new ToDoDbContext();
-
         private readonly IToDoDAL _todoDal;
 
-        public TodosController(IToDoDAL todoDal)
+        public TodosController(ToDoDAL todoDal)
         {
             this._todoDal = todoDal;
         }
@@ -24,14 +22,14 @@ namespace ToDo.Web.Controllers
         // GET: api/Todos
         public IQueryable<Todo> GetTodos()
         {
-            return db.Todos;
+            return _todoDal.GetAllTodos();
         }
 
         // GET: api/Todos/5
         [ResponseType(typeof(Todo))]
-        public async Task<IHttpActionResult> GetTodo(int id)
+        public IHttpActionResult GetTodo(int id)
         {
-            Todo todo = await db.Todos.FindAsync(id);
+            Todo todo = _todoDal.GetToDoFromId(id);
             if (todo == null)
             {
                 return NotFound();
@@ -40,9 +38,46 @@ namespace ToDo.Web.Controllers
             return Ok(todo);
         }
 
+        // PUT: api/Todos
+        [ResponseType(typeof(void))]
+        public IHttpActionResult PutTodo(Todo todo)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (todo.Id == 0)
+            {
+                return BadRequest();
+            }
+
+            todo.TodoTask = _todoDal.GetToDoFromId(todo.Id).TodoTask;
+
+            _todoDal.SetState(todo, EntityState.Modified);
+
+            try
+            {
+                _todoDal.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!TodoExists(todo.Id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
         // PUT: api/Todos/5
         [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> PutTodo(int id, Todo todo)
+        public IHttpActionResult PutTodo(int id, Todo todo)
         {
             if (!ModelState.IsValid)
             {
@@ -59,11 +94,11 @@ namespace ToDo.Web.Controllers
                 todo.TodoTask = _todoDal.GetToDoFromId(id).TodoTask;
             }
 
-            db.Entry(todo).State = EntityState.Modified;
+            _todoDal.SetState(todo, EntityState.Modified);
 
             try
             {
-                await db.SaveChangesAsync();
+                _todoDal.SaveChanges();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -82,31 +117,32 @@ namespace ToDo.Web.Controllers
 
         // POST: api/Todos
         [ResponseType(typeof(Todo))]
-        public async Task<IHttpActionResult> PostTodo(Todo todo)
+        public IHttpActionResult PostTodo(Todo todo)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            db.Todos.Add(todo);
-            await db.SaveChangesAsync();
+            _todoDal.AddTodo(todo);
+            _todoDal.SaveChanges();
 
             return CreatedAtRoute("DefaultApi", new { id = todo.Id }, todo);
         }
 
         // DELETE: api/Todos/5
         [ResponseType(typeof(Todo))]
-        public async Task<IHttpActionResult> DeleteTodo(int id)
+        public IHttpActionResult DeleteTodo(int id)
         {
-            Todo todo = await db.Todos.FindAsync(id);
+            var todo = _todoDal.GetToDoFromId(id);
             if (todo == null)
             {
                 return NotFound();
             }
 
-            db.Todos.Remove(todo);
-            await db.SaveChangesAsync();
+            _todoDal.RemoveTodo(todo);
+
+            _todoDal.SaveChanges();
 
             return Ok(todo);
         }
@@ -115,14 +151,16 @@ namespace ToDo.Web.Controllers
         {
             if (disposing)
             {
-                db.Dispose();
+                _todoDal.Dispose();
             }
             base.Dispose(disposing);
         }
 
         private bool TodoExists(int id)
         {
-            return db.Todos.Count(e => e.Id == id) > 0;
+            var todo =_todoDal.GetToDoFromId(id);
+
+            return todo != null && todo.Id > 0;
         }
     }
 }
