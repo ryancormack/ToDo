@@ -1,4 +1,5 @@
-﻿using System.Web.Http;
+﻿using System.Net.Http.Headers;
+using System.Web.Http;
 using Microsoft.Practices.Unity;
 using ToDo.Domain.DAL;
 using ToDo.Web.IoC;
@@ -16,6 +17,9 @@ namespace ToDo.Web
 
 
             // Web API configuration and services
+
+            //Give me json
+            config.Formatters.JsonFormatter.SupportedMediaTypes.Add(new MediaTypeHeaderValue("text/html"));
 
             // Web API routes
             config.MapHttpAttributeRoutes();
