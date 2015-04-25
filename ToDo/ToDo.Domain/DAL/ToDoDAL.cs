@@ -43,7 +43,6 @@ namespace ToDo.Domain.DAL
         public void SetState(Todo todo, EntityState state)
         {
             _db.Todos.AddOrUpdate(todo);
-            _db.Entry(todo).State = state;
         }
 
         public void SaveChanges()

@@ -79,20 +79,14 @@ namespace ToDo.Web.Controllers
         [ResponseType(typeof(void))]
         public IHttpActionResult PutTodo(int id, Todo todo)
         {
+            var oldTodo = _todoDal.GetToDoFromId(id);
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != todo.Id)
-            {
-                return BadRequest();
-            }
-
-            if (todo.TodoTask == null)
-            {
-                todo.TodoTask = _todoDal.GetToDoFromId(id).TodoTask;
-            }
+            PopulateNewTodo(todo, oldTodo);
 
             _todoDal.SetState(todo, EntityState.Modified);
 
@@ -113,6 +107,24 @@ namespace ToDo.Web.Controllers
             }
 
             return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        private void PopulateNewTodo(Todo todo, Todo oldTodo)
+        {
+            if (todo.Id == 0)
+            {
+                todo.Id = oldTodo.Id;
+            }
+
+            if (todo.TodoTask == null)
+            {
+                todo.TodoTask = oldTodo.TodoTask;
+            }
+
+            if (todo.IsComplete)
+            {
+                todo.IsComplete = true;
+            }
         }
 
         // POST: api/Todos
